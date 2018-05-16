@@ -75,21 +75,21 @@ export interface Program4
 {
 	tag: "Program4";
 	exps: Exp4[];
-};
+}
 
 export interface DefineExp4
 {
 	tag: "DefineExp4";
 	var: VarDecl;
 	val: CExp4;
-};
+}
 
 export interface AppExp4
 {
 	tag: "AppExp4";
 	rator: CExp4;
 	rands: CExp4[];
-};
+}
 
 // L2
 export interface IfExp4
@@ -98,21 +98,21 @@ export interface IfExp4
 	test: CExp4;
 	then: CExp4;
 	alt: CExp4;
-};
+}
 
 export interface ProcExp4
 {
 	tag: "ProcExp4";
 	args: VarDecl[],
 	body: CExp4[];
-};
+}
 
 export interface Binding4
 {
 	tag: "Binding4";
 	var: VarDecl;
 	val: CExp4;
-};
+}
 
 // L3
 export interface LetExp4
@@ -120,13 +120,13 @@ export interface LetExp4
 	tag: "LetExp4";
 	bindings: Binding4[];
 	body: CExp4[];
-};
+}
 
 export interface LitExp4
 {
 	tag: "LitExp4";
 	val: SExp4;
-};
+}
 
 // L4
 export interface LetrecExp4
@@ -134,14 +134,14 @@ export interface LetrecExp4
 	tag: "LetrecExp4";
 	bindings: Binding4[];
 	body: CExp4[];
-};
+}
 
 export interface SetExp4
 {
 	tag: "SetExp4";
 	var: VarRef;
 	val: CExp4;
-};
+}
 
 // Type value constructors for disjoint types
 export const makeProgram4 = (exps: Exp4[]): Program4 => ({tag: "Program4", exps: exps});
@@ -217,7 +217,7 @@ const parseProgram4 = (es: Array<Parsed4 | Error>): Program4 | Error =>
 const parseDefine4 = (es: any[]): DefineExp4 | Error =>
 	(es.length !== 2) ? Error(`define should be (define var val) - ${es}`) :
 		!isString(es[0]) ? Error(`Expected (define <var> <CExp>) - ${es[0]}`) :
-			safeF((val: CExp4) => makeDefineExp4(makeVarDecl(es[0]), val))(parseL4CExp(es[1]));
+			safeF((val: CExp4) => makeDefineExp4(makeVarDecl(es[0], false), val))(parseL4CExp(es[1]));
 
 export const parseL4CExp = (sexp: any): CExp4 | Error =>
 	isArray(sexp) ? parseL4CompoundCExp(sexp) :
@@ -233,7 +233,7 @@ const parseL4CompoundCExp = (sexps: any[]): CExp4 | Error =>
 					first(sexps) === "letrec" ? parseLetrecExp4(sexps) :
 						first(sexps) === "set!" ? parseSetExp4(sexps) :
 							first(sexps) === "quote" ? parseLitExp4(sexps) :
-								parseAppExp4(sexps)
+								parseAppExp4(sexps);
 
 const parseAppExp4 = (sexps: any[]): AppExp4 | Error =>
 	safeFL((cexps: CExp4[]) => makeAppExp4(first(cexps), rest(cexps)))(map(parseL4CExp, sexps));
@@ -242,8 +242,7 @@ const parseIfExp4 = (sexps: any[]): IfExp4 | Error =>
 	safeFL((cexps: CExp4[]) => makeIfExp4(cexps[0], cexps[1], cexps[2]))(map(parseL4CExp, rest(sexps)));
 
 const parseProcExp4 = (sexps: any[]): ProcExp4 | Error =>
-	safeFL((body: CExp4[]) => makeProcExp4(map(makeVarDecl, sexps[1]), body))
-	(map(parseL4CExp, rest(rest(sexps))));
+	safeFL((body: CExp4[]) => makeProcExp4(map((val: string): VarDecl | Error => isArray(val) ? (val.length === 2 && val[1] === "lazy" ? makeVarDecl(val[0], true) : Error("Not lazy")) : makeVarDecl(val, false), sexps[1]), body)) (map(parseL4CExp, rest(rest(sexps))));
 
 // LetExp ::= (let (<binding>*) <cexp>+)
 const parseLetExp4 = (sexps: any[]): LetExp4 | Error =>
