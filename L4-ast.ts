@@ -242,7 +242,7 @@ const parseIfExp4 = (sexps: any[]): IfExp4 | Error =>
 	safeFL((cexps: CExp4[]) => makeIfExp4(cexps[0], cexps[1], cexps[2]))(map(parseL4CExp, rest(sexps)));
 
 const parseProcExp4 = (sexps: any[]): ProcExp4 | Error =>
-	safeFL((body: CExp4[]) => makeProcExp4(map((val: string): VarDecl | Error => isArray(val) ? (val.length === 2 && val[1] === "lazy" ? makeVarDecl(val[0], true) : Error("Not lazy")) : makeVarDecl(val, false), sexps[1]), body)) (map(parseL4CExp, rest(rest(sexps))));
+	safeFL((body: CExp4[]) => makeProcExp4(map((val: string | string[]): VarDecl | Error => isArray(val) ? (val.length === 2 && val[1] === "lazy" ? makeVarDecl(val[0], true) : Error("Not lazy")) : makeVarDecl(<string>val, false), sexps[1]), body))(map(parseL4CExp, rest(rest(sexps))));
 
 // LetExp ::= (let (<binding>*) <cexp>+)
 const parseLetExp4 = (sexps: any[]): LetExp4 | Error =>

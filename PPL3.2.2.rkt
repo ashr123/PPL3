@@ -9,5 +9,5 @@
           (goo arg))) a b))))
 (define goo
   (foo (lambda (y)
-       (+ y 5))))
+         (+ y 5))))
 (goo 5)
