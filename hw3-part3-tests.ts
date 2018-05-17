@@ -15,5 +15,5 @@ import {evalParse} from "./L3-eval";
 // 	true);
 
 assert.deepEqual(evalParse(`
-    (L3 (if ((lambda ((x lazy)) (= x 10)) 10) #t #f))`),
+    (L3 (if ((lambda (x) (= x 10)) 10) #t #f))`),
 	true);

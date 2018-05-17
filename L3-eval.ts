@@ -2,58 +2,58 @@
 
 import {filter, map, reduce, zip} from "ramda";
 import {
-	BoolExp,
-	CExp,
-	Exp,
-	IfExp,
-	isAppExp,
-	isBoolean,
-	isBoolExp,
-	isDefineExp,
-	isEmpty,
-	isExp,
-	isIfExp,
-	isLitExp,
-	isNumber,
-	isNumExp,
-	isPrimOp,
-	isProcExp,
-	isProgram,
-	isStrExp,
-	isString,
-	isVarRef,
-	LitExp,
-	makeAppExp,
-	makeBoolExp,
-	makeIfExp,
-	makeLitExp,
-	makeNumExp,
-	makeProcExp,
-	makeStrExp,
-	makeVarDecl,
-	makeVarRef,
-	NumExp,
-	Parsed,
-	parseL3,
-	PrimOp,
-	ProcExp,
-	Program,
-	StrExp,
-	VarDecl,
-	VarRef
+    BoolExp,
+    CExp,
+    Exp,
+    IfExp,
+    isAppExp,
+    isBoolean,
+    isBoolExp, isCExp,
+    isDefineExp,
+    isEmpty,
+    isExp,
+    isIfExp,
+    isLitExp,
+    isNumber,
+    isNumExp,
+    isPrimOp,
+    isProcExp,
+    isProgram,
+    isStrExp,
+    isString,
+    isVarRef,
+    LitExp,
+    makeAppExp,
+    makeBoolExp,
+    makeIfExp,
+    makeLitExp,
+    makeNumExp,
+    makeProcExp,
+    makeStrExp,
+    makeVarDecl,
+    makeVarRef,
+    NumExp,
+    Parsed,
+    parseL3,
+    PrimOp,
+    ProcExp,
+    Program,
+    StrExp,
+    VarDecl,
+    VarRef
 } from "./L3-ast";
 import {applyEnv, Env, makeEmptyEnv, makeEnv} from "./L3-env";
 import {
-	Closure,
-	CompoundSExp,
-	isClosure,
-	isCompoundSExp,
-	isEmptySExp,
-	isSymbolSExp,
-	makeClosure,
-	makeCompoundSExp,
-	makeEmptySExp,
-	Value
+    Closure,
+    CompoundSExp,
+    isClosure,
+    isCompoundSExp,
+    isEmptySExp,
+    isSymbolSExp,
+    makeClosure,
+    makeCompoundSExp,
+    makeEmptySExp, SExp,
+    Value
 } from "./L3-value";
 import {getErrorMessages, hasNoError, isError} from "./error";
 import {allT, first, rest, second} from './list';
@@ -79,7 +79,6 @@ function evalAppExp(primOrProc: Value | Error, rands: CExp[], env: Env)
 
 const L3applicativeEval = (exp: CExp | Error, env: Env): Value | Error =>
 {
-	let primOrclosure;
 	return isError(exp) ? exp :
 		isNumExp(exp) ? exp.val :
 			isBoolExp(exp) ? exp.val :
@@ -88,11 +87,9 @@ const L3applicativeEval = (exp: CExp | Error, env: Env): Value | Error =>
 						isVarRef(exp) ? applyEnv(env, exp.var) :
 							isLitExp(exp) ? exp.val :
 								isIfExp(exp) ? evalIf(exp, env) :
-									isProcExp(exp) ? evalProc(exp, env) :
-										isAppExp(exp) ? /*L3applyProcedure(primOrclosure=L3applicativeEval(exp.rator, env),
-											map((rand) => L3applicativeEval(rand, env), exp.rands)/!*only exp.rands in normal eval*!/,
-											env)*/evalAppExp(L3applicativeEval(exp.rator, env), exp.rands, env) :
-											Error(`Bad L3 AST ${exp}`);
+                                    isProcExp(exp) ? evalProc(exp, env) :
+                                        isAppExp(exp) ? L3applyProcedure(L3applicativeEval(exp.rator, env),
+                                            exp.rands, env): Error(`Bad L3 AST ${exp}`);
 };
 
 export const isTrueValue = (x: Value | Error): boolean | Error =>
@@ -110,10 +107,10 @@ const evalIf = (exp: IfExp, env: Env): Value | Error =>
 const evalProc = (exp: ProcExp, env: Env): Value =>
 	makeClosure(exp.args, exp.body);
 
-const L3applyProcedure = (proc: Value | Error, args: Array<Value | Error>, env: Env): Value | Error =>
+const L3applyProcedure = (proc: Value | Error, args: Array<Value | CExp | Error>, env: Env): Value | Error =>
 	isError(proc) ? proc :
 		!hasNoError(args) ? Error(`Bad argument: ${getErrorMessages(args)}`) :
-			isPrimOp(proc) ? applyPrimitive(proc, args) :
+			isPrimOp(proc) ? applyPrimitive(proc, map((rand) => L3applicativeEval(rand, env), args)) :
 				isClosure(proc) ? applyClosure(proc, args, env) :
 					Error("Bad procedure " + JSON.stringify(proc));
 
@@ -126,12 +123,15 @@ const valueToLitExp = (v: Value): NumExp | BoolExp | StrExp | LitExp | PrimOp | 
 						makeLitExp(v);
 
 // @Pre: none of the args is an Error (checked in applyProcedure)
-const applyClosure = (proc: Closure, args: Value[], env: Env): Value | Error =>
+const applyClosure = (proc: Closure, args: Array<Value | CExp>, env: Env): Value | Error =>
 {
 	let vars = map((v: VarDecl) => v.var, proc.params);
 	let body = renameExps(proc.body);
-	let litArgs = map(valueToLitExp, args);
-	return evalExps(substitute(body, vars, litArgs), env);
+    var notLitArgs = map((paramsAndRands) => (<VarDecl>paramsAndRands[0]).lazy ? paramsAndRands[1] : L3applicativeEval(paramsAndRands[1], env))
+	if (!hasNoError(notLitArgs))
+        return Error("Bad argument: " + getErrorMessages(args));
+    var litArgs = map(function (argument) { return (isCExp(argument) ? argument : valueToLitExp(argument)); }, notLitArgs);
+	return evalExps(exports.substitute(body, vars, litArgs), env);
 };
 
 // For applicative eval - the type of exps should be ValueExp[] | VarRef[];
@@ -199,15 +199,14 @@ export const renameExps = (exps: CExp[]): CExp[] =>
 	//  First recursively rename all ProcExps inside the body.
 	const replaceProc = (e: ProcExp): ProcExp =>
 	{
-		const oldArgs: string[] = map((arg: VarDecl): string => arg.var, e.args);
-		const newArgs = map(varGen, oldArgs);
+		const oldArgs: string[] = map(((arg) => (arg[0]).lazy ? arg.var + " lazy" : arg.var), e.args);
+		const newArgs = parseNewNames(map(varGen, oldArgs));
 		const newBody = map(replace, e.body);
 		return makeProcExp(map(makeVarDecl, newArgs),
 			substitute(newBody, oldArgs, map(makeVarRef, newArgs)));
 	};
 	return map(replace, exps);
 };
-
 
 // @Pre: none of the args is an Error (checked in applyProcedure)
 export const applyPrimitive = (proc: PrimOp, args: Value[]): Value | Error =>
