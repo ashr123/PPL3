@@ -153,5 +153,4 @@ export const evalNormalParse = (s: string): Value | Error =>
 	{
 		return ast;
 	}
-}
-
+};

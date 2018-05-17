@@ -97,7 +97,7 @@ const L3applyProcedure = (proc: Value | Error, args: Array<Value | Error>, env: 
 		!hasNoError(args) ? Error(`Bad argument: ${getErrorMessages(args)}`) :
 			isPrimOp(proc) ? applyPrimitive(proc, args) :
 				isClosure(proc) ? applyClosure(proc, args, env) :
-					Error("Bad procedure " + JSON.stringify(proc))
+					Error("Bad procedure " + JSON.stringify(proc));
 
 const valueToLitExp = (v: Value): NumExp | BoolExp | StrExp | LitExp | PrimOp | ProcExp =>
 	isNumber(v) ? makeNumExp(v) :
@@ -114,7 +114,7 @@ const applyClosure = (proc: Closure, args: Value[], env: Env): Value | Error =>
 	let body = renameExps(proc.body);
 	let litArgs = map(valueToLitExp, args);
 	return evalExps(substitute(body, vars, litArgs), env);
-}
+};
 
 // For applicative eval - the type of exps should be ValueExp[] | VarRef[];
 // where ValueExp is an expression which directly encodes a value:
@@ -149,7 +149,7 @@ export const substitute = (body: CExp[], vars: string[], exps: CExp[]): CExp[] =
 										isAppExp(e) ? makeAppExp(sub(e.rator), map(sub, e.rands)) :
 											e;
 	return map(sub, body);
-}
+};
 
 /*
     Purpose: create a generator of new symbols of the form v__n
@@ -163,7 +163,7 @@ export const makeVarGen = (): (v: string) => string =>
 		count++;
 		return `${v}__${count}`;
 	}
-}
+};
 
 /*
 Purpose: Consistently rename bound variables in 'exps' to fresh names.
@@ -181,14 +181,14 @@ export const renameExps = (exps: CExp[]): CExp[] =>
 	//  First recursively rename all ProcExps inside the body.
 	const replaceProc = (e: ProcExp): ProcExp =>
 	{
-		const oldArgs = map((arg: VarDecl): string => arg.var, e.args);
+		const oldArgs: string[] = map((arg: VarDecl): string => arg.var, e.args);
 		const newArgs = map(varGen, oldArgs);
 		const newBody = map(replace, e.body);
 		return makeProcExp(map(makeVarDecl, newArgs),
 			substitute(newBody, oldArgs, map(makeVarRef, newArgs)));
-	}
+	};
 	return map(replace, exps);
-}
+};
 
 
 // @Pre: none of the args is an Error (checked in applyProcedure)
@@ -218,50 +218,29 @@ const minusPrim = (args: Value[]): number | Error =>
 	// TODO complete
 	let x = args[0], y = args[1];
 	if (isNumber(x) && isNumber(y))
-	{
 		return x - y;
-	} else
-	{
-		return Error(`Type error: - expects numbers ${args}`)
-	}
-}
+	return Error(`Type error: - expects numbers ${args}`)
+};
 
 const divPrim = (args: Value[]): number | Error =>
 {
 	// TODO complete
 	let x = args[0], y = args[1];
 	if (isNumber(x) && isNumber(y))
-	{
 		return x / y;
-	} else
-	{
-		return Error(`Type error: / expects numbers ${args}`)
-	}
-}
+	return Error(`Type error: / expects numbers ${args}`)
+};
 
 const eqPrim = (args: Value[]): boolean | Error =>
 {
 	let x = args[0], y = args[1];
-	if (isSymbolSExp(x) && isSymbolSExp(y))
-	{
-		return x.val === y.val;
-	} else if (isEmptySExp(x) && isEmptySExp(y))
-	{
-		return true;
-	} else if (isNumber(x) && isNumber(y))
-	{
-		return x === y;
-	} else if (isString(x) && isString(y))
-	{
-		return x === y;
-	} else if (isBoolean(x) && isBoolean(y))
-	{
-		return x === y;
-	} else
-	{
-		return false;
-	}
-}
+	return isSymbolSExp(x) && isSymbolSExp(y) ? x.val === y.val :
+		isEmptySExp(x) && isEmptySExp(y) ? true :
+			isNumber(x) && isNumber(y) ? x === y :
+				isString(x) && isString(y) ? x === y :
+					isBoolean(x) && isBoolean(y) ? x === y :
+						false;
+};
 
 const carPrim = (v: Value): Value | Error =>
 	isCompoundSExp(v) ? first(v.val) :
@@ -302,7 +281,7 @@ const evalDefineExps = (exps: Exp[], env): Value | Error =>
 		let newEnv = makeEnv(def.var.var, rhs, env);
 		return evalExps(rest(exps), newEnv);
 	}
-}
+};
 
 // Main program
 export const evalL3program = (program: Program): Value | Error =>
@@ -311,15 +290,8 @@ export const evalL3program = (program: Program): Value | Error =>
 export const evalParse = (s: string): Value | Error =>
 {
 	let ast: Parsed | Error = parseL3(s);
-	if (isProgram(ast))
-	{
-		return evalL3program(ast);
-	} else if (isExp(ast))
-	{
-		return evalExps([ast], makeEmptyEnv());
-	} else
-	{
-		return ast;
-	}
-}
+	return isProgram(ast) ? evalL3program(ast) :
+		isExp(ast) ? evalExps([ast], makeEmptyEnv()) :
+			ast;
+};
 
