@@ -151,7 +151,7 @@ export const makeBoolExp = (b: boolean): BoolExp => ({tag: "BoolExp", val: b});
 export const makeStrExp = (s: string): StrExp => ({tag: "StrExp", val: s});
 export const makePrimOp = (op: string): PrimOp => ({tag: "PrimOp", op: op});
 export const makeVarRef = (v: string): VarRef => ({tag: "VarRef", var: v});
-export const makeVarDecl = (v: string, lazy: boolean): VarDecl => ({tag: "VarDecl", var: v, lazy: lazy});
+export const makeVarDecl = (v: string, lazy: boolean): VarDecl => ({tag: "VarDecl", var: v, lazy: lazy===undefined ? false : lazy});
 export const makeAppExp = (rator: CExp, rands: CExp[]): AppExp =>
 	({tag: "AppExp", rator: rator, rands: rands});
 // L2

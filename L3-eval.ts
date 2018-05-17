@@ -61,8 +61,26 @@ import {allT, first, rest, second} from './list';
 // ========================================================
 // Eval functions
 
+
+function evalAppExp(primOrProc: Value | Error, rands: CExp[], env: Env)
+{
+	if (isError(primOrProc))
+		return primOrProc;
+	if (!hasNoError(rands))
+		return Error(`Bad argument: ${getErrorMessages(rands)}`);
+	if (isPrimOp(primOrProc))
+		return L3applyProcedure(primOrProc, map((rand) => L3applicativeEval(rand, env), rands), env);
+	if (isClosure(primOrProc))
+	{
+		return L3applyProcedure(primOrProc,
+			map((paramsAndRands) => (<VarDecl>paramsAndRands[0]).lazy ? paramsAndRands[1] : L3applicativeEval(paramsAndRands[1], env), zip(primOrProc.params, rands)), env)
+	}
+}
+
 const L3applicativeEval = (exp: CExp | Error, env: Env): Value | Error =>
-	isError(exp) ? exp :
+{
+	let primOrclosure;
+	return isError(exp) ? exp :
 		isNumExp(exp) ? exp.val :
 			isBoolExp(exp) ? exp.val :
 				isStrExp(exp) ? exp.val :
@@ -71,11 +89,11 @@ const L3applicativeEval = (exp: CExp | Error, env: Env): Value | Error =>
 							isLitExp(exp) ? exp.val :
 								isIfExp(exp) ? evalIf(exp, env) :
 									isProcExp(exp) ? evalProc(exp, env) :
-										isAppExp(exp) ? L3applyProcedure(L3applicativeEval(exp.rator, env),
-											map((rand) => L3applicativeEval(rand, env),
-												exp.rands),
-											env) :
+										isAppExp(exp) ? /*L3applyProcedure(primOrclosure=L3applicativeEval(exp.rator, env),
+											map((rand) => L3applicativeEval(rand, env), exp.rands)/!*only exp.rands in normal eval*!/,
+											env)*/evalAppExp(L3applicativeEval(exp.rator, env), exp.rands, env) :
 											Error(`Bad L3 AST ${exp}`);
+};
 
 export const isTrueValue = (x: Value | Error): boolean | Error =>
 	isError(x) ? x :

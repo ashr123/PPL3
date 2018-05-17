@@ -101,7 +101,7 @@ const applyClosure4 = (proc: Closure4, args: Value4[]): Value4 | Error =>
 {
 	let vars = map((v: VarDecl) => v.var, proc.params);
 	return evalExps(proc.body, makeExtEnv(vars, args, proc.env));
-}
+};
 
 // Evaluate a sequence of expressions (in a program)
 export const evalExps = (exps: Exp4[], env: Env): Value4 | Error =>
