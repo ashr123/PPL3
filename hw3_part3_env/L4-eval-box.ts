@@ -111,6 +111,8 @@ const applyClosure4 = (proc: Closure4, args: CExp4[], env: Env): Value4 | Error 
 {
 	let vars = map((v: VarDecl) => v.var, proc.params);
 	const newArgs: Array<Value4 | thunk> = map(arr => arr[0].lazy ? makeThunk(arr[1], env) : L4applicativeEval(arr[1], env), zip(proc.params, args));
+	if ((!hasNoError(newArgs)))
+		return Error(getErrorMessages(newArgs));
 	return evalExps(proc.body, makeExtEnv(vars, newArgs, proc.env));
 };
 
@@ -257,7 +259,6 @@ const consPrim = (v: Value4, lv: Value4): CompoundSExp4 | Error =>
 
 const isListPrim = (v: Value4): boolean =>
 	isEmptySExp(v) || isCompoundSExp4(v);
-
 
 // Main program
 export const evalL4program = (program: Program4): Value4 | Error =>

@@ -109,10 +109,12 @@ const valueToLitExp = (v: Value | Error): NumExp | BoolExp | StrExp | LitExp | P
 const applyClosure = (proc: Closure, args: CExp[], env: Env): Value | Error =>
 {
 	const vars = map((v: VarDecl) => v.var, proc.params);
-	const body = renameExps(proc.body);
+	const body = renameExps(proc.body, proc.params);
 	const newArgs = map(arr => arr[0].lazy ? arr[1] : valueToLitExp(L3applicativeEval(arr[1], env)),
 		zip(proc.params, args));
-	return evalExps(substitute(body, vars, newArgs), env);
+	if (!hasNoError(newArgs))
+		return Error(getErrorMessages(newArgs));
+	return evalExps(substitute(body, vars, <CExp[]>newArgs), env);
 };
 
 // For applicative eval - the type of exps should be ValueExp[] | VarRef[];
@@ -168,7 +170,7 @@ export const makeVarGen = (): (v: string) => string =>
 Purpose: Consistently rename bound variables in 'exps' to fresh names.
          Start numbering at 1 for all new var names.
 */
-export const renameExps = (exps: CExp[]): CExp[] =>
+export const renameExps = (exps: CExp[], params?: VarDecl[]): CExp[] =>
 {
 	const varGen = makeVarGen();
 	const replace = (e: CExp): CExp =>
@@ -183,7 +185,8 @@ export const renameExps = (exps: CExp[]): CExp[] =>
 		const oldArgs: string[] = map((arg: VarDecl): string => arg.var, e.args);
 		const newArgs = map(varGen, oldArgs);
 		const newBody = map(replace, e.body);
-		return makeProcExp(map(makeVarDecl, newArgs),
+
+		return makeProcExp(map(params!==undefined ? arr=>makeVarDecl(arr[1], arr[0].lazy) : makeVarDecl, params !== undefined ? zip(params, newArgs) : newArgs),
 			substitute(newBody, oldArgs, map(makeVarRef, newArgs)));
 	};
 	return map(replace, exps);
